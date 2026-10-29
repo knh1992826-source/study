@@ -18,7 +18,11 @@
   .btn:hover{background:#e06a00}
   #info{position:fixed;left:10px;bottom:10px;right:10px;z-index:10;max-width:420px;background:#fffe;border-radius:14px;padding:10px 14px;font-size:14px;line-height:1.5}
   .lab{position:fixed;z-index:5;transform:translate(-50%,-100%);background:#ffffffd9;padding:2px 8px;border-radius:10px;font-size:13px;font-weight:700;pointer-events:none;white-space:nowrap}
-  #layers{background:#fffd;border-radius:12px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+  #tools{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 340px)}
+  .chip{border:3px solid var(--c,#fff);background:#fff;color:#333;font:inherit;font-weight:800;padding:6px 12px;border-radius:999px;cursor:pointer;box-shadow:0 2px 6px #0003}
+  .chip.on{background:var(--c);color:#fff}
+  .chip.view{--c:#33291f}
+  #layers{display:none;background:#fffd;border-radius:12px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:3px}
   #layers label{cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:700}
   #layers i{width:11px;height:11px;border-radius:50%;display:inline-block}
   .lab{border:2px solid var(--c,#fff)}
@@ -38,6 +42,7 @@
   <button class="btn" id="dn">낮 / 밤</button>
   <div id="layers"><b style="background:none;padding:0;font-size:13px">🗺️ 지도 레이어</b></div>
 </div>
+<div id="tools"></div>
 <div id="nav"></div>
 <div id="info">마우스로 <b>드래그</b>=회전, <b>휠</b>=확대/축소, 오른쪽 버튼으로 장소 이동!</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -213,13 +218,17 @@ function addItem(cat,n,x,z,t,pinH=1.6){
   return it;
 }
 // 레이어 패널
-const lp=document.getElementById("layers");
+const lp=document.getElementById("tools");
 for(const k in CAT){
-  const l=document.createElement("label");
-  l.innerHTML='<input type="checkbox" checked><i style="background:'+CAT[k].c+'"></i>'+CAT[k].name;
-  l.querySelector("input").onchange=e=>{on[k]=e.target.checked;grp[k].visible=on[k];};
-  lp.appendChild(l);
+  const b=document.createElement("button");
+  b.className="chip on";b.style.setProperty("--c",CAT[k].c);b.textContent=CAT[k].name;
+  b.onclick=()=>{on[k]=!on[k];grp[k].visible=on[k];b.classList.toggle("on",on[k]);};
+  lp.appendChild(b);
 }
+[["🗺️ 지도 보기",()=>{phi=.12;gDist=75;fly(PLACES[5]);}],["🧊 3D 보기",()=>{phi=.95;gDist=60;fly(PLACES[5]);}]].forEach(v=>{
+  const b=document.createElement("button");b.className="chip view on";b.textContent=v[0];
+  b.onclick=()=>{auto=false;document.getElementById("rot").textContent="자동 회전: 꺼짐";v[1]();};lp.appendChild(b);
+});
 
 // 관광지
 const SPOTS=[
