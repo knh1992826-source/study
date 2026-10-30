@@ -1,0 +1,9 @@
+{
+  "name": "jeju-history-culture-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "제주 역사문화 데이터 조회 화면 (API 호출 버전, Vercel 배포용)",
+  "scripts": {
+    "dev": "node dev.mjs"
+  }
+}

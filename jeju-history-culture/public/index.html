@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>제주 역사문화 스탬프 투어 🐥 (API)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { --bg:#fffbe6; --ink:#4a3600; --muted:#8a7a4a; --line:#f7e7a0; --brand:#ffc93c; --brand-dark:#e0a100; --mint:#ffe27a; --sky:#bfe7f5; --card:#fffef7; --accent:#ff8f1f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: 'Jua','Malgun Gothic','Noto Sans KR',system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  button { font-family:inherit; }
+  header { position:relative; overflow:hidden; padding:26px 20px 52px; background:linear-gradient(135deg,#ffe680,#ffd23f 55%,#ffb703); color:#5a3e00; text-align:center; }
+  header h1 { margin:0 0 6px; font-size:28px; text-shadow:0 2px 0 rgba(255,255,255,.55); }
+  header p { margin:0; opacity:.95; font-size:14px; }
+  header .deco { position:absolute; font-size:30px; opacity:.85; }
+  header::after { content:''; position:absolute; left:0; right:0; bottom:-1px; height:26px; background:var(--bg); border-radius:50% 50% 0 0 / 100% 100% 0 0; }
+  .tabs { max-width:1300px; margin:-18px auto 0; padding:0 16px; display:flex; gap:8px; position:relative; z-index:2; }
+  .tab { border:2px solid var(--line); background:#fff; border-radius:999px; padding:9px 20px; cursor:pointer; font-size:15px; color:var(--ink); box-shadow:0 3px 0 var(--line); }
+  .tab.active { background:var(--brand); border-color:var(--brand-dark); color:#4a3600; box-shadow:0 3px 0 var(--brand-dark); }
+  main { max-width:1300px; margin:0 auto; padding:16px; }
+  .view { display:none; }
+  .view.active { display:grid; }
+  #v-find { grid-template-columns:minmax(320px,420px) 1fr; gap:16px; align-items:start; }
+  #v-course { grid-template-columns:1fr minmax(320px,440px); gap:16px; align-items:start; }
+  @media (max-width: 900px) { #v-find, #v-course { grid-template-columns:1fr; } }
+  .panel { background:var(--card); border:2px solid var(--line); border-radius:20px; padding:14px; box-shadow:0 4px 0 var(--line); }
+  .panel h2 { margin:2px 0 8px; font-size:19px; }
+  .controls { display:flex; gap:8px; margin-bottom:10px; }
+  .controls input { flex:1; padding:10px 14px; border:2px solid var(--line); border-radius:999px; font:inherit; font-size:14px; background:#fff; }
+  .controls input:focus { outline:none; border-color:var(--brand); }
+  .controls select { padding:9px 10px; border:2px solid var(--line); border-radius:999px; font:inherit; font-size:14px; background:#fff; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; max-height:112px; overflow:auto; }
+  .chip { border:2px solid var(--line); background:#fff; border-radius:999px; padding:3px 11px; cursor:pointer; font-size:13px; color:var(--ink); }
+  .chip.active { background:#ffd84d; border-color:#e0a100; color:#4a3600; }
+  .count { color:var(--muted); font-size:13px; margin:4px 0 8px; }
+  .list { display:flex; flex-direction:column; gap:8px; max-height:560px; overflow:auto; padding:2px 4px 4px 2px; }
+  .item { display:flex; gap:10px; align-items:center; border:2px solid var(--line); border-radius:16px; padding:9px 12px; background:#fff; }
+  .item:hover { border-color:var(--brand); }
+  .item .ico { font-size:24px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#fff3c4; flex:none; }
+  .item .main { flex:1; cursor:pointer; text-align:left; border:0; background:none; font:inherit; color:inherit; padding:0; min-width:0; }
+  .item h3 { margin:2px 0; font-size:16px; font-weight:400; }
+  .item .addr { margin:0; color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tag { display:inline-block; background:#fff1b8; color:#7a5600; border-radius:999px; padding:1px 9px; font-size:11px; }
+  .pick { border:2px solid var(--accent); color:var(--accent); background:#fff; border-radius:999px; padding:5px 11px; cursor:pointer; font-size:13px; white-space:nowrap; }
+  .pick.on { background:var(--accent); color:#fff; }
+  .mapbox { position:relative; }
+  .map { height:560px; border-radius:16px; border:3px solid #fff; box-shadow:0 0 0 2px var(--line); background:var(--sky); }
+  .map.small { height:520px; }
+  @media (max-width: 900px) { .map, .map.small { height:420px; } }
+  .legend { position:absolute; left:10px; bottom:10px; z-index:500; background:rgba(255,255,255,.92); border-radius:14px; padding:6px 10px; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+  .compass { position:absolute; right:12px; top:12px; z-index:500; font-size:26px; background:rgba(255,255,255,.85); border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+  .stats { display:flex; flex-wrap:wrap; gap:6px 14px; color:var(--muted); font-size:13px; margin-bottom:8px; }
+  .bar { height:12px; background:#f3e6d3; border-radius:99px; overflow:hidden; margin:6px 0 12px; }
+  .bar > i { display:block; height:100%; width:0; background:linear-gradient(90deg,#ffe066,#ff9f1c); border-radius:99px; transition:width .35s; }
+  ol.steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
+  ol.steps li { display:flex; align-items:center; gap:8px; border:2px solid var(--line); border-radius:14px; padding:7px 10px; font-size:14px; background:#fff; }
+  ol.steps li.done { background:#fff4d6; border-color:#ffd166; }
+  .num { width:26px; height:26px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; flex:none; }
+  .steps .nm { flex:1; cursor:pointer; background:none; border:0; text-align:left; font:inherit; color:inherit; padding:0; }
+  .mini { border:2px solid var(--line); background:#fff; border-radius:10px; padding:2px 8px; cursor:pointer; font-size:12px; color:var(--ink); }
+  .mini:disabled { opacity:.35; cursor:default; }
+  .stamp { border-color:#ffb703; color:#b86e00; }
+  .stamp.on { background:#ffb703; color:#fff; }
+  .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .actions button { border:2px solid var(--mint); background:#fff; color:#7a5600; border-radius:999px; padding:7px 14px; cursor:pointer; font-size:13px; }
+  .actions button.danger { border-color:#d6c7b5; color:#8a7b72; }
+  .empty { color:var(--muted); text-align:center; padding:18px 0; font-size:14px; }
+  /* 지도 장식 */
+  .geo { color:#4a7c59; font-size:12px; white-space:nowrap; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; transform:translate(-50%,-50%); }
+  .geo.big { font-size:14px; color:#2f6b45; }
+  .sea { font-size:22px; transform:translate(-50%,-50%); opacity:.9; }
+  .sea.wave { font-size:12px; color:#6aaed0; letter-spacing:2px; }
+  .hallasan { font-size:28px; transform:translate(-50%,-60%); filter:drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+  .pin { position:relative; width:34px; height:34px; }
+  .pin i { position:absolute; inset:0; border-radius:50% 50% 50% 0; transform:rotate(-45deg); background:var(--c,#ff8a5b); border:3px solid #fff; box-shadow:0 2px 5px rgba(0,0,0,.4); }
+  .pin span { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; transform:translateY(-2px); font-style:normal; }
+  .pin.hot i { background:var(--accent); }
+  .pin.done i { background:#ffb703; }
+  .pin b { position:absolute; top:-6px; right:-8px; background:#3b2f2f; color:#fff; border-radius:50%; min-width:19px; height:19px; font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:400; border:2px solid #fff; }
+  .leaflet-marker-icon.pin-wrap { background:none; border:0; transition:transform .15s; }
+  .leaflet-marker-icon.pin-wrap:hover { transform:translateY(-3px) scale(1.12); z-index:9999 !important; }
+  .route { animation: dash 1.2s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset:-26; } }
+  .leaflet-popup-content-wrapper { border-radius:18px; border:2px solid var(--line); }
+  .pop h4 { margin:2px 0 4px; font-size:16px; font-weight:400; }
+  .pop .a { color:var(--muted); font-size:12px; margin:0 0 6px; }
+  .pop .d { font-size:13px; line-height:1.55; margin:0 0 8px; max-height:110px; overflow:auto; }
+  .pop .b { display:flex; gap:6px; flex-wrap:wrap; }
+  .modal-bg { position:fixed; inset:0; background:rgba(40,25,10,.5); display:none; align-items:center; justify-content:center; padding:16px; z-index:2000; }
+  .modal-bg.open { display:flex; }
+  .modal { background:#fffdf9; border-radius:22px; width:min(720px,100%); max-height:90vh; overflow:auto; padding:22px 24px; position:relative; border:3px solid var(--line); }
+  .modal h2 { margin:8px 0 2px; font-weight:400; }
+  .modal .subtitle { color:var(--muted); margin:0 0 14px; }
+  .modal dl { display:grid; grid-template-columns:96px 1fr; gap:6px 12px; margin:14px 0; font-size:14px; }
+  .modal dt { color:var(--muted); }
+  .modal dd { margin:0; word-break:break-word; }
+  .modal .body { white-space:pre-wrap; line-height:1.75; font-size:15px; font-family:'Malgun Gothic','Noto Sans KR',system-ui,sans-serif; background:#fff9d6; border:2px solid var(--line); border-radius:14px; padding:12px 14px; }
+  .modal .links { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; align-items:center; }
+  .modal .links a { background:var(--brand); color:#4a3600; text-decoration:none; padding:8px 14px; border-radius:999px; font-size:14px; }
+  .close { position:absolute; top:12px; right:14px; border:0; background:none; font-size:22px; cursor:pointer; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#4a3600; color:#fff; padding:10px 18px; border-radius:999px; font-size:14px; z-index:3000; opacity:0; transition:opacity .25s; pointer-events:none; }
+  .toast.show { opacity:.95; }
+  footer { max-width:1300px; margin:0 auto; padding:6px 20px 36px; color:var(--muted); font-size:12px; line-height:1.6; font-family:'Malgun Gothic','Noto Sans KR',system-ui,sans-serif; }
+
+  /* 헤더 애니메이션: 달리는 말, 떨어지는 귤 */
+  .gallop { position:absolute; bottom:22px; left:-70px; font-size:36px; animation:run 9s linear infinite; z-index:1; }
+  @keyframes run { from { left:-70px; } to { left:105%; } }
+  .fall { position:absolute; top:-30px; font-size:24px; animation:drop 6s ease-in infinite; }
+  @keyframes drop { 0% { transform:translateY(0) rotate(0); opacity:0; } 10% { opacity:1; } 100% { transform:translateY(170px) rotate(360deg); opacity:0; } }
+  /* 제주 구경하기 */
+  #v-explore.active { display:block; }
+  .sec { margin:6px 0 26px; }
+  .sec h2 { margin:0 0 4px; font-size:22px; }
+  .sec > p { margin:0 0 12px; color:var(--muted); font-size:14px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
+  .ex { background:var(--card); border:2px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 4px 0 var(--line); transition:transform .15s; }
+  .ex:hover { transform:translateY(-4px) rotate(-.6deg); }
+  .photo { position:relative; height:150px; display:flex; align-items:center; justify-content:center; font-size:64px; overflow:hidden; }
+  .photo svg { width:100%; height:100%; }
+  .photo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .ex .t { padding:10px 14px 14px; }
+  .ex h3 { margin:0 0 4px; font-size:17px; font-weight:400; }
+  .ex p { margin:0; font-size:13px; line-height:1.55; color:#6b5a1f; font-family:'Malgun Gothic','Noto Sans KR',system-ui,sans-serif; }
+  .ex .badge { display:inline-block; margin-bottom:4px; background:#fff1b8; color:#7a5600; border-radius:999px; padding:1px 9px; font-size:11px; }
+  .note { font-size:12px; color:var(--muted); font-family:'Malgun Gothic','Noto Sans KR',system-ui,sans-serif; }
+</style>
+</head>
+<body>
+<header>
+  <span class="deco" style="left:6%;top:18px">🐥</span><span class="deco" style="right:8%;top:24px">⭐</span>
+  <span class="gallop">🐎</span>
+  <span class="fall" style="left:12%;animation-delay:0s">🍊</span><span class="fall" style="left:30%;animation-delay:1.8s">🍊</span>
+  <span class="fall" style="left:52%;animation-delay:3.2s">🍊</span><span class="fall" style="left:70%;animation-delay:.9s">🍊</span>
+  <span class="fall" style="left:88%;animation-delay:2.6s">🍊</span>
+  <h1>🏛️ 제주 역사문화 스탬프 투어</h1>
+  <p>마음에 드는 곳을 찜해서 나만의 답사 코스를 만들고, 다녀온 곳엔 스탬프를 꾹! 찍어요</p>
+</header>
+
+<nav class="tabs" aria-label="화면 선택">
+  <button class="tab active" data-tab="find">🗺️ 장소 찾기</button>
+  <button class="tab" data-tab="course">🚩 나의 답사 코스 <span id="tabCount"></span></button>
+  <button class="tab" data-tab="explore">🐴 제주 구경하기</button>
+</nav>
+
+<main>
+  <section class="view active" id="v-find">
+    <div class="panel">
+      <div class="controls">
+        <input id="q" type="search" placeholder="🔍 장소명, 주소, 내용 검색 (예: 고분, 용담동)">
+        <select id="sort"><option value="name">이름순</option><option value="id">번호순</option></select>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="count" id="count"></div>
+      <div class="list" id="list"></div>
+    </div>
+    <div class="panel">
+      <h2>📍 장소 지도 <small style="font-weight:400;color:var(--muted);font-size:12px">핀을 누르면 설명이 떠요</small></h2>
+      <div class="mapbox">
+        <div class="map" id="map"></div>
+        <div class="compass" title="북쪽이 위">🧭</div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-course">
+    <div class="panel">
+      <h2>🚩 나의 답사 코스 지도</h2>
+      <div class="mapbox">
+        <div class="map small" id="cmap"></div>
+        <div class="compass" title="북쪽이 위">🧭</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>코스 목록</h2>
+      <div class="stats" id="stats"></div>
+      <div class="bar"><i id="barFill"></i></div>
+      <ol class="steps" id="steps"></ol>
+      <div class="empty" id="courseEmpty">'장소 찾기'에서 <b>♡ 찜</b>을 누르면 여기에 코스가 만들어져요.</div>
+      <div class="actions" id="actions" hidden>
+        <button id="copyBtn">코스 텍스트 복사</button>
+        <button id="clearBtn" class="danger">코스 비우기</button>
+      </div>
+    </div>
+  </section>
+  <section class="view" id="v-explore">
+    <div id="explore"></div>
+    <p class="note">사진은 Wikimedia Commons의 자유 이용 사진이고(출처는 아래 목록), 사진이 없는 카드는 직접 그린 그림이에요. 사진은 <b>images</b> 폴더에 들어 있으니 이 폴더와 함께 보관해 주세요. 설명은 간단 소개이며 정확한 정보는 제주관광공사 등에서 확인해 주세요.</p>
+  </section>
+</main>
+
+<footer>
+  데이터 출처: 공공데이터포털 · API로 불러온 제주특별자치도_제주역사문화일반정보, 제주특별자치도_제주역사문화위치정보 (데이터 기준일자 2022-12-09). 원본 내용을 변경하지 않고 표시합니다.<br>
+  지도: 장소 좌표(위도·경도)를 Leaflet으로 표시한 간략 일러스트 지도입니다. 섬 모양과 지명 위치는 대략적이며 실제 해안선·위치와 다를 수 있습니다. 코스 거리는 직선거리 합계입니다.
+</footer>
+
+<div class="modal-bg" id="modalBg" role="dialog" aria-modal="true"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(async function main() {
+// 데이터는 파일이 아니라 API(/api/places)로 받아온다.
+let DATA;
+try {
+  const res = await fetch('/api/places');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  DATA = (await res.json()).items;
+} catch (err) {
+  document.body.insertAdjacentHTML('afterbegin', '<div style="padding:24px;text-align:center;color:#8a5a00">데이터를 불러오지 못했어요 😢 (' + String(err.message || err) + ')<br>잠시 후 새로고침해 주세요.</div>');
+  return;
+}
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const clean = (v) => (v && v !== '해당없음' ? v : '');
+const byId = new Map(DATA.map((d) => [d.id, d]));
+const kind = (d) => clean(d.dir1) || clean(d.category) || '기타';
+
+// 분야별 이모지·핀 색
+const STYLE = {
+  '의식주':['🍚','#ff9f1c'], '통과의례':['🎎','#ff6b8b'], '기타':['📌','#9aa5b1'], '신화/전설':['🐉','#8e6bbf'],
+  '생산기술':['🛠️','#6c8ead'], '무속':['🔮','#a14f9c'], '민간신앙':['🛕','#c0764a'], '방언':['💬','#3fa7d6'],
+  '사회':['👥','#4fb996'], '역사':['📜','#c8962e'], '문화':['🎨','#e4572e'], '자연':['🌿','#5aa469'],
+  '관광':['🧭','#2f9fb0'], '민속공예':['🧺','#b0804f'],
+};
+const styleOf = (d) => STYLE[kind(d)] ?? ['📍', '#ff8a5b'];
+
+// 저장소가 막혀 있어도 동작하도록 try/catch
+const store = {
+  get(k, fb) { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch { return fb; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 무시 */ } },
+};
+let course = store.get('jeju-course', []).filter((id) => byId.has(id));
+let stamps = new Set(store.get('jeju-stamps', []));
+let kindFilter = '전체';
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ---------- 일러스트 지도 (배경 지도 없이 직접 그림, 한국어 표기) ---------- */
+// 제주도 해안선 (대략적인 윤곽)
+const JEJU = [
+  [33.525,126.53],[33.53,126.60],[33.55,126.65],[33.552,126.70],[33.565,126.75],[33.56,126.80],[33.535,126.86],[33.50,126.91],
+  [33.47,126.945],[33.43,126.925],[33.38,126.90],[33.33,126.84],[33.28,126.76],[33.255,126.64],[33.235,126.56],[33.235,126.47],
+  [33.245,126.40],[33.235,126.33],[33.215,126.27],[33.225,126.20],[33.28,126.165],[33.33,126.165],[33.39,126.20],[33.43,126.26],
+  [33.47,126.31],[33.50,126.40],[33.515,126.47],
+];
+const REGIONS = [
+  ['제주시',33.495,126.53,1],['서귀포시',33.265,126.56,1],['조천',33.51,126.65],['구좌',33.52,126.79],['성산',33.43,126.89],
+  ['표선',33.32,126.80],['남원',33.30,126.70],['중문',33.26,126.42],['대정',33.24,126.27],['한경',33.32,126.21],['한림',33.40,126.28],['애월',33.46,126.36],
+];
+const SEA = [['🐬',33.64,126.45],['⛵',33.12,126.75],['🐟',33.36,126.02],['🐙',33.14,126.2],['🐳',33.66,126.85],['⛴️',33.6,126.18]];
+
+function makeMap(id) {
+  const m = L.map(id, { attributionControl: false, minZoom: 9, maxZoom: 15, zoomSnap: 0.25, maxBounds: [[32.95, 125.85], [33.85, 127.25]], maxBoundsViscosity: 0.8 });
+  m.fitBounds(L.latLngBounds(JEJU), { padding: [24, 24] });
+  L.polygon(JEJU, { color: '#f5deb3', weight: 14, opacity: 0.9, fillOpacity: 0, interactive: false, smoothFactor: 2 }).addTo(m); // 모래 해안
+  L.polygon(JEJU, { color: '#8ecf7a', weight: 2, fillColor: '#c9efb0', fillOpacity: 1, interactive: false, smoothFactor: 2 }).addTo(m);
+  L.circle([33.362, 126.533], { radius: 11000, color: '#7fc06b', weight: 2, fillColor: '#a6dd8f', fillOpacity: 0.9, interactive: false }).addTo(m);
+  L.circle([33.362, 126.533], { radius: 5000, color: '#6aa95a', weight: 2, fillColor: '#88c874', fillOpacity: 0.9, interactive: false }).addTo(m);
+  const text = (cls, html, lat, lng) => L.marker([lat, lng], { interactive: false, keyboard: false, icon: L.divIcon({ className: '', html: `<div class="${cls}">${html}</div>`, iconSize: [0, 0] }) }).addTo(m);
+  text('hallasan', '🌋', 33.362, 126.533);
+  text('geo big', '한라산', 33.325, 126.533);
+  REGIONS.forEach(([n, la, ln, big]) => text(`geo${big ? ' big' : ''}`, n, la, ln));
+  text('geo', '🏝️ 우도', 33.505, 126.96);
+  text('geo', '🏝️ 마라도', 33.115, 126.27);
+  SEA.forEach(([e, la, ln]) => text('sea', e, la, ln));
+  text('sea wave', '～～～', 33.7, 126.6); text('sea wave', '～～～', 33.1, 126.55); text('sea wave', '～～～', 33.4, 126.05);
+  return m;
+}
+
+function pinIcon(d, opt = {}) {
+  const [emoji, color] = styleOf(d);
+  const cls = `pin${opt.hot ? ' hot' : ''}${opt.done ? ' done' : ''}`;
+  return L.divIcon({
+    className: 'pin-wrap',
+    html: `<div class="${cls}" style="--c:${color}"><i></i><span>${emoji}</span>${opt.num ? `<b>${opt.num}</b>` : ''}</div>`,
+    iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -32],
+  });
+}
+
+function popupHtml(d) {
+  const inCourse = course.includes(d.id);
+  const text = clean(d.content);
+  const desc = [clean(d.title), text.length > 140 ? text.slice(0, 140) + '…' : text].filter(Boolean).join(' — ') || '등록된 설명이 없어요.';
+  return `<div class="pop">
+    <span class="tag">${styleOf(d)[0]} ${esc(kind(d))}</span>
+    <h4>${esc(d.name)}</h4>
+    <p class="a">📍 ${esc(d.address || '주소 정보 없음')}</p>
+    <p class="d">${esc(desc)}</p>
+    <div class="b">
+      <button class="pick ${inCourse ? 'on' : ''}" data-act="toggle" data-id="${d.id}">${inCourse ? '♥ 찜함' : '♡ 찜'}</button>
+      <button class="mini" data-act="detail" data-id="${d.id}">자세히 보기</button>
+    </div></div>`;
+}
+
+let map = null, cmap = null, pinLayer = null, courseLayer = null;
+const pins = new Map();
+if (window.L) {
+  map = makeMap('map');
+  pinLayer = L.layerGroup().addTo(map);
+  DATA.forEach((d) => {
+    if (!d.lat || !d.lng) return;
+    pins.set(d.id, L.marker([+d.lat, +d.lng], { icon: pinIcon(d), title: d.name, riseOnHover: true }).bindPopup(() => popupHtml(d), { maxWidth: 280 }));
+  });
+  cmap = makeMap('cmap');
+  courseLayer = L.layerGroup().addTo(cmap);
+} else {
+  const msg = '<div class="empty">지도를 불러오지 못했어요. 인터넷 연결을 확인해 주세요. (목록과 코스는 계속 쓸 수 있어요)</div>';
+  $('map').innerHTML = msg; $('cmap').innerHTML = msg;
+}
+
+/* ---------- 계산 ---------- */
+function km(a, b) {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function totalKm() {
+  let sum = 0;
+  for (let i = 1; i < course.length; i++) {
+    const a = byId.get(course[i - 1]), b = byId.get(course[i]);
+    sum += km({ lat: +a.lat, lng: +a.lng }, { lat: +b.lat, lng: +b.lng });
+  }
+  return sum;
+}
+
+/* ---------- 검색 · 목록 · 핀 ---------- */
+function buildChips() {
+  const counts = {};
+  DATA.forEach((d) => { const k = kind(d); counts[k] = (counts[k] || 0) + 1; });
+  const names = ['전체', ...Object.keys(counts).sort((a, b) => counts[b] - counts[a])];
+  $('chips').innerHTML = names.map((n) => `<button class="chip${n === kindFilter ? ' active' : ''}" data-c="${esc(n)}">${n === '전체' ? '🗂️' : (STYLE[n] ?? ['📍'])[0]} ${esc(n)} ${n === '전체' ? DATA.length : counts[n]}</button>`).join('');
+  $('legend').textContent = '💡 위 분야 버튼으로 핀을 골라 볼 수 있어요';
+}
+function filtered() {
+  const q = $('q').value.trim().toLowerCase();
+  let list = DATA.filter((d) => kindFilter === '전체' || kind(d) === kindFilter);
+  if (q) list = list.filter((d) => [d.name, d.address, d.title, d.subtitle, d.dir1, d.dir2, d.content, d.subject].join(' ').toLowerCase().includes(q));
+  return [...list].sort($('sort').value === 'id' ? (a, b) => a.id - b.id : (a, b) => a.name.localeCompare(b.name, 'ko'));
+}
+function renderFind(fit) {
+  const list = filtered();
+  $('count').textContent = `${list.length}곳 (지도 핀 ${list.length}개)`;
+  $('list').innerHTML = list.length ? list.map((d) => `
+    <div class="item">
+      <span class="ico">${styleOf(d)[0]}</span>
+      <button class="main" data-act="focus" data-id="${d.id}">
+        <span class="tag">${esc(kind(d))}</span>
+        <h3>${esc(d.name)}</h3>
+        <p class="addr">📍 ${esc(d.address || '주소 정보 없음')}</p>
+      </button>
+      <button class="pick ${course.includes(d.id) ? 'on' : ''}" data-act="toggle" data-id="${d.id}">${course.includes(d.id) ? '♥ 찜함' : '♡ 찜'}</button>
+    </div>`).join('') : '<div class="empty">검색 결과가 없어요 🥲</div>';
+  if (!map) return;
+  pinLayer.clearLayers();
+  const pts = [];
+  list.forEach((d) => {
+    const p = pins.get(d.id);
+    if (!p) return;
+    p.setIcon(pinIcon(d, { hot: course.includes(d.id) }));
+    pinLayer.addLayer(p);
+    pts.push(p.getLatLng());
+  });
+  if (fit) {
+    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 13 });
+    else if (pts.length === 1) map.setView(pts[0], 13);
+    else map.fitBounds(L.latLngBounds(JEJU), { padding: [24, 24] });
+  }
+}
+
+/* ---------- 코스 ---------- */
+function renderCourse(fit) {
+  $('tabCount').textContent = course.length ? `(${course.length})` : '';
+  $('courseEmpty').hidden = course.length > 0;
+  $('actions').hidden = course.length === 0;
+  $('steps').innerHTML = course.map((id, i) => {
+    const d = byId.get(id), done = stamps.has(id);
+    return `<li class="${done ? 'done' : ''}">
+      <span class="num">${i + 1}</span>
+      <button class="nm" data-act="cfocus" data-id="${id}">${styleOf(d)[0]} ${esc(d.name)}</button>
+      <button class="mini stamp ${done ? 'on' : ''}" data-act="stamp" data-id="${id}">${done ? '🏅 완료' : '스탬프'}</button>
+      <button class="mini" data-act="up" data-id="${id}" ${i === 0 ? 'disabled' : ''} aria-label="위로">▲</button>
+      <button class="mini" data-act="down" data-id="${id}" ${i === course.length - 1 ? 'disabled' : ''} aria-label="아래로">▼</button>
+      <button class="mini" data-act="toggle" data-id="${id}" aria-label="삭제">✕</button>
+    </li>`;
+  }).join('');
+  const done = course.filter((id) => stamps.has(id)).length;
+  $('stats').innerHTML = `<span>📍 ${course.length}곳</span><span>📏 직선 거리 합계 약 ${totalKm().toFixed(1)}km</span><span>🏅 스탬프 ${done}/${course.length}</span>`;
+  $('barFill').style.width = course.length ? `${(done / course.length) * 100}%` : '0';
+
+  if (!cmap) return;
+  courseLayer.clearLayers();
+  const pts = course.map((id) => byId.get(id)).filter((d) => d.lat && d.lng);
+  const ll = pts.map((d) => [+d.lat, +d.lng]);
+  if (ll.length > 1) {
+    L.polyline(ll, { color: '#fff', weight: 9, opacity: 0.85, interactive: false }).addTo(courseLayer);
+    L.polyline(ll, { color: '#ff8f1f', weight: 4, opacity: 1, dashArray: '2 11', lineCap: 'round', className: 'route', interactive: false }).addTo(courseLayer);
+  }
+  pts.forEach((d, i) => {
+    L.marker([+d.lat, +d.lng], { icon: pinIcon(d, { num: i + 1, done: stamps.has(d.id), hot: !stamps.has(d.id) }), title: `${i + 1}. ${d.name}` })
+      .bindPopup(() => popupHtml(d), { maxWidth: 280 }).addTo(courseLayer);
+  });
+  if (fit) {
+    if (ll.length > 1) cmap.fitBounds(ll, { padding: [60, 60], maxZoom: 13 });
+    else if (ll.length === 1) cmap.setView(ll[0], 12);
+    else cmap.fitBounds(L.latLngBounds(JEJU), { padding: [24, 24] });
+  }
+}
+
+function refresh(fitFind, fitCourse) {
+  store.set('jeju-course', course);
+  store.set('jeju-stamps', [...stamps]);
+  renderFind(fitFind); renderCourse(fitCourse);
+}
+
+/* ---------- 동작 ---------- */
+function toggleCourse(id) {
+  const i = course.indexOf(id);
+  if (i >= 0) { course.splice(i, 1); toast('코스에서 뺐어요'); } else { course.push(id); toast(`${course.length}번째 코스에 담았어요 🚩`); }
+  if (map) { map.closePopup(); cmap.closePopup(); }
+  refresh(false, true);
+}
+function move(id, dir) {
+  const i = course.indexOf(id), j = i + dir;
+  if (i < 0 || j < 0 || j >= course.length) return;
+  [course[i], course[j]] = [course[j], course[i]];
+  refresh(false, true);
+}
+function toggleStamp(id) {
+  if (stamps.has(id)) stamps.delete(id); else { stamps.add(id); toast('🏅 스탬프 꾹! 잘했어요'); }
+  refresh(false, false);
+}
+async function copyCourse() {
+  const text = '나의 제주 역사문화 답사 코스\n' + course.map((id, i) => `${i + 1}. ${byId.get(id).name} (${byId.get(id).address})`).join('\n') + `\n직선 거리 합계 약 ${totalKm().toFixed(1)}km`;
+  try { await navigator.clipboard.writeText(text); toast('코스를 복사했어요'); } catch { prompt('아래 내용을 복사하세요', text); }
+}
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  $('v-find').classList.toggle('active', name === 'find');
+  $('v-course').classList.toggle('active', name === 'course');
+  $('v-explore').classList.toggle('active', name === 'explore');
+  if (!map) return;
+  setTimeout(() => { // 숨겨져 있던 지도는 크기를 다시 계산해야 한다
+    if (name === 'find') map.invalidateSize(); else { cmap.invalidateSize(); renderCourse(true); }
+  }, 30);
+}
+function focusPin(id, which) {
+  const d = byId.get(id);
+  if (!d || !d.lat) return;
+  if (which === 'course') {
+    cmap.setView([+d.lat, +d.lng], 13);
+    courseLayer.eachLayer((l) => { if (l.getLatLng && l.options.title && l.options.title.endsWith(d.name)) l.openPopup(); });
+  } else {
+    const p = pins.get(id);
+    if (!p) return;
+    map.setView([+d.lat, +d.lng], Math.max(map.getZoom(), 13));
+    p.openPopup();
+  }
+}
+
+function openDetail(id) {
+  const d = byId.get(id);
+  if (!d) return;
+  const rows = [
+    ['주소', d.address], ['우편번호', d.zip], ['위도/경도', d.lat && d.lng ? `${d.lat}, ${d.lng}` : ''],
+    ['분류', [d.category, d.dir1, d.dir2].map(clean).filter(Boolean).join(' > ')],
+    ['주제', clean(d.subject)], ['저작자', clean(d.author)], ['발행자', clean(d.publisher)], ['출처', clean(d.source)], ['데이터 기준일', d.date],
+  ].filter(([, v]) => v);
+  $('modal').innerHTML = `
+    <button class="close" aria-label="닫기" data-act="close">✕</button>
+    <span class="tag">${styleOf(d)[0]} ${esc(kind(d))}</span>
+    <h2>${esc(d.name)}</h2>
+    <p class="subtitle">${esc(clean(d.title))}${clean(d.subtitle) ? ' · ' + esc(d.subtitle) : ''}</p>
+    <dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+    ${clean(d.content) ? `<div class="body">${esc(d.content)}</div>` : '<p class="subtitle">상세 내용이 없어요.</p>'}
+    <div class="links">
+      <button class="pick ${course.includes(d.id) ? 'on' : ''}" data-act="toggle-modal" data-id="${d.id}">${course.includes(d.id) ? '♥ 찜함' : '♡ 찜'}</button>
+      ${/^https?:\/\//.test(d.detailUrl) ? `<a href="${esc(d.detailUrl)}" target="_blank" rel="noopener">제주시 상세보기 ↗</a>` : ''}
+    </div>`;
+  $('modalBg').classList.add('open');
+}
+const closeModal = () => $('modalBg').classList.remove('open');
+
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]');
+  if (el) {
+    const id = Number(el.dataset.id);
+    switch (el.dataset.act) {
+      case 'toggle': toggleCourse(id); break;
+      case 'toggle-modal': toggleCourse(id); openDetail(id); break;
+      case 'detail': openDetail(id); break;
+      case 'focus': focusPin(id, 'find'); break;
+      case 'cfocus': focusPin(id, 'course'); break;
+      case 'stamp': toggleStamp(id); break;
+      case 'up': move(id, -1); break;
+      case 'down': move(id, 1); break;
+      case 'close': closeModal(); break;
+    }
+    return;
+  }
+  if (e.target.id === 'modalBg') closeModal();
+  const chip = e.target.closest('.chip');
+  if (chip) { kindFilter = chip.dataset.c; buildChips(); renderFind(true); }
+  const tab = e.target.closest('.tab');
+  if (tab) showTab(tab.dataset.tab);
+});
+$('q').addEventListener('input', () => renderFind(true));
+$('sort').addEventListener('change', () => renderFind(false));
+$('copyBtn').addEventListener('click', copyCourse);
+$('clearBtn').addEventListener('click', () => {
+  if (!course.length || !confirm('코스와 스탬프를 모두 비울까요?')) return;
+  course = []; stamps = new Set(); refresh(false, true);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+
+/* ---------- 제주 구경하기 (일러스트 카드) ---------- */
+const bg = (c, inner) => '<svg viewBox="0 0 120 120" role="img"><rect width="120" height="120" fill="' + c + '"/>' + inner + '</svg>';
+const ART = {
+  horse: bg('#d9f2c4', '<ellipse cx="60" cy="108" rx="48" ry="7" fill="#b6e08f"/><path d="M28 64 Q12 68 17 90 Q27 82 31 72Z" fill="#5b3a1a"/><ellipse cx="56" cy="68" rx="30" ry="18" fill="#b9783f"/><rect x="34" y="78" width="7" height="26" rx="3" fill="#a2652f"/><rect x="46" y="80" width="7" height="24" rx="3" fill="#a2652f"/><rect x="68" y="80" width="7" height="24" rx="3" fill="#a2652f"/><rect x="79" y="78" width="7" height="26" rx="3" fill="#a2652f"/><path d="M78 60 L90 34 L103 41 L92 68Z" fill="#b9783f"/><ellipse cx="102" cy="43" rx="13" ry="9" transform="rotate(28 102 43)" fill="#c98a52"/><path d="M79 58 Q82 36 91 31 Q88 48 87 62Z" fill="#5b3a1a"/><path d="M90 32 L93 20 L99 33Z" fill="#b9783f"/><circle cx="102" cy="38" r="2.2" fill="#2b1b0a"/><circle cx="110" cy="48" r="1.6" fill="#7a4a22"/><path d="M104 52 Q108 54 111 51" stroke="#7a4a22" stroke-width="1.5" fill="none"/><circle cx="96" cy="46" r="3" fill="#ffb3b3" opacity=".7"/>'),
+  tangerine: bg('#fff2b8', '<circle cx="46" cy="72" r="30" fill="#ff9f1c"/><ellipse cx="36" cy="60" rx="9" ry="6" fill="#ffc266" transform="rotate(-30 36 60)"/><path d="M46 42 Q44 34 48 30" stroke="#6a8f2a" stroke-width="3" fill="none"/><path d="M48 36 Q64 24 72 36 Q58 44 48 36Z" fill="#5fb04a"/><circle cx="38" cy="74" r="2.6" fill="#4a2a00"/><circle cx="56" cy="74" r="2.6" fill="#4a2a00"/><path d="M40 84 Q47 90 54 84" stroke="#4a2a00" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="32" cy="82" r="4" fill="#ff7a5c" opacity=".6"/><circle cx="60" cy="82" r="4" fill="#ff7a5c" opacity=".6"/><circle cx="88" cy="88" r="17" fill="#ffb02e"/><path d="M88 72 Q90 66 94 64" stroke="#6a8f2a" stroke-width="2.5" fill="none"/><path d="M90 68 Q100 60 106 68 Q96 74 90 68Z" fill="#5fb04a"/><circle cx="83" cy="88" r="1.8" fill="#4a2a00"/><circle cx="93" cy="88" r="1.8" fill="#4a2a00"/><path d="M84 94 Q88 98 92 94" stroke="#4a2a00" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+  hallasan: bg('#cdeefb', '<circle cx="98" cy="24" r="12" fill="#ffe066"/><path d="M0 108 L40 58 Q60 40 80 58 L120 108Z" fill="#6bbf6b"/><path d="M0 108 L34 70 Q50 82 62 70 Q76 82 90 68 L120 108Z" fill="#4fa356"/><ellipse cx="60" cy="48" rx="13" ry="4.5" fill="#6ec6ea"/><ellipse cx="60" cy="46.5" rx="13" ry="3" fill="#a5defa"/><ellipse cx="22" cy="30" rx="14" ry="6" fill="#fff"/><ellipse cx="32" cy="27" rx="10" ry="5" fill="#fff"/>'),
+  seongsan: bg('#ffd7a1', '<circle cx="60" cy="68" r="26" fill="#ffe066"/><rect y="86" width="120" height="34" fill="#4fb3d9"/><path d="M0 92 Q15 86 30 92 T60 92 T90 92 T120 92 V120 H0Z" fill="#3aa0cc"/><path d="M6 94 L18 74 L26 58 L36 66 L48 54 L60 62 L74 56 L86 68 L100 76 L114 94Z" fill="#6fbf6a"/><path d="M26 58 L36 66 L48 54 L40 70Z" fill="#58a857"/><path d="M14 100 Q26 97 38 100 M70 104 Q84 101 98 104" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/>'),
+  dolhareubang: bg('#e6efd9', '<ellipse cx="60" cy="108" rx="40" ry="6" fill="#c8d9b4"/><rect x="38" y="66" width="44" height="42" rx="14" fill="#8f949a"/><rect x="40" y="30" width="40" height="42" rx="18" fill="#a3a8ae"/><ellipse cx="60" cy="30" rx="26" ry="9" fill="#777c82"/><rect x="45" y="14" width="30" height="20" rx="14" fill="#8a8f95"/><circle cx="51" cy="48" r="5.5" fill="#fff"/><circle cx="69" cy="48" r="5.5" fill="#fff"/><circle cx="51" cy="49" r="2.6" fill="#333"/><circle cx="69" cy="49" r="2.6" fill="#333"/><ellipse cx="60" cy="57" rx="4" ry="5" fill="#8a8f95"/><path d="M52 64 Q60 69 68 64" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="43" cy="58" r="3.5" fill="#d9a3a3" opacity=".6"/><circle cx="77" cy="58" r="3.5" fill="#d9a3a3" opacity=".6"/><ellipse cx="48" cy="86" rx="9" ry="6" fill="#a3a8ae"/><ellipse cx="72" cy="80" rx="9" ry="6" fill="#a3a8ae"/>'),
+  haenyeo: bg('#bfe7f5', '<rect y="64" width="120" height="56" fill="#4fb3d9"/><path d="M0 66 Q10 60 20 66 T40 66 T60 66 T80 66 T100 66 T120 66 V120 H0Z" fill="#3aa0cc"/><circle cx="82" cy="70" r="15" fill="#ff8f1f"/><path d="M82 55 V85 M67 70 H97 M71 60 Q82 70 71 80 M93 60 Q82 70 93 80" stroke="#c96a00" stroke-width="1.5" fill="none"/><circle cx="36" cy="56" r="17" fill="#2b2b2b"/><circle cx="36" cy="62" r="13" fill="#ffd9b0"/><rect x="25" y="55" width="22" height="9" rx="4.5" fill="#6ec6ea" stroke="#2b2b2b" stroke-width="2"/><path d="M31 71 Q36 75 41 71" stroke="#a24b2a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M8 82 Q20 78 32 82 M56 96 Q70 92 84 96" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/>'),
+};
+
+const EXPLORE = [
+  ['🌋 제주 명소', '한 번쯤 가 보고 싶은 제주의 멋진 곳', [
+    ['hallasan', '한라산', '높이 1,947m로 대한민국에서 가장 높은 산이에요. 꼭대기에 백록담이 있어요.', '#cdeefb'],
+    ['seongsan', '성산일출봉', '바다 위로 솟은 화산 분화구예요. 해돋이 명소로 유명해요.', '#ffd7a1'],
+    ['mangjang', '만장굴', '세계적으로 손꼽히는 용암동굴이에요. 한여름에도 시원해요.', '#e3dcf5', '🕳️'],
+    ['hyeopjae', '협재해변', '에메랄드빛 바다와 하얀 모래, 멀리 비양도가 보여요.', '#bff0f0', '🏖️'],
+    ['cheonjiyeon', '천지연폭포', '서귀포의 대표 폭포예요. 울창한 숲 사이로 시원하게 떨어져요.', '#d5f0e3', '💦'],
+    ['udo', '우도', '소가 누워 있는 모습을 닮은 섬이에요. 땅콩으로도 유명해요.', '#d7f0ff', '🏝️'],
+    ['jusang', '주상절리대', '용암이 식으면서 만든 육각 기둥 절벽이에요.', '#e5e5e5', '🪨'],
+  ]],
+  ['🍊 제주 특산물', '제주에서 맛볼 수 있는 맛있는 것들', [
+    ['tangerine', '감귤', '제주를 대표하는 특산물이에요. 겨울에 새콤달콤하게 익어요.', '#fff2b8'],
+    ['hallabong', '한라봉', '꼭지가 볼록 튀어나온 모양이 한라산을 닮았다고 해요.', '#ffe3a8', '🍊'],
+    ['blackpork', '흑돼지', '고소하고 쫄깃한 제주 흑돼지구이가 인기예요.', '#f0d9d0', '🥓'],
+    ['galchi', '갈치', '은빛으로 반짝이는 제주 갈치, 구이와 조림으로 먹어요.', '#dff1fb', '🐟'],
+    ['okdom', '옥돔', '담백한 맛으로 사랑받는 제주 대표 생선이에요.', '#ffe0e0', '🐠'],
+    ['jeonbok', '전복', '제주 바다에서 자란 전복, 죽이나 구이로 즐겨요.', '#dff3ea', '🦪'],
+    ['omegi', '오메기떡', '차조로 만든 쫀득한 제주 전통 떡이에요.', '#eadcf7', '🍡'],
+    ['bomal', '보말', '바닷가 고둥이에요. 보말국, 보말칼국수로 먹어요.', '#e8f0d8', '🐚'],
+    ['peanut', '우도땅콩', '우도에서 나는 고소한 땅콩이에요.', '#f3e3c8', '🥜'],
+    ['gosari', '고사리', '봄에 꺾는 제주 고사리, 육개장에 넣기도 해요.', '#d9efd0', '🌿'],
+  ]],
+  ['🗿 제주에만 있는 것', '제주에서만 만날 수 있는 특별한 이야기', [
+    ['horse', '제주 조랑말', '몸집이 작고 튼튼한 제주 토종말(제주마)이에요. 초원을 달리는 모습이 제주의 상징이에요.', '#d9f2c4'],
+    ['dolhareubang', '돌하르방', '제주의 상징인 돌 할아버지 조각상이에요. 마을을 지켜 주는 수호신 같은 존재예요.', '#e6efd9'],
+    ['haenyeo', '해녀', '숨을 참고 바다에 들어가 해산물을 따는 제주 여성들이에요. 해녀 문화는 유네스코 인류무형문화유산이에요.', '#bfe7f5'],
+    ['oreum', '오름', '한라산 곁에 솟은 작은 화산 언덕이에요. 제주에 368개가 있다고 해요.', '#dff2c9', '⛰️'],
+    ['jeongnang', '정낭', '집 대문 대신 걸쳐 두는 나무 막대예요. 걸쳐 둔 막대 수로 집을 비웠는지 알렸어요.', '#f3e6cf', '🚧'],
+    ['olle', '올레길', '바다와 마을을 잇는 제주의 걷기 여행길이에요.', '#d9efe6', '🥾'],
+    ['dolddam', '현무암 돌담', '검은 현무암으로 쌓은 돌담이에요. 거센 바람을 막아 줘요.', '#e4e4e4', '🧱'],
+    ['teu', '테우', '통나무를 엮어 만든 제주의 전통 배예요.', '#d7ecf5', '🛶'],
+    ['jejueo', '제주어', '육지와는 다른 제주만의 말이에요. "혼저 옵서예"는 "어서 오세요"라는 뜻이에요.', '#fde2ec', '💬'],
+    ['samda', '삼다도', '돌·바람·여자가 많다고 해서 제주를 삼다도라고도 불러요.', '#e8e2f7', '🌬️'],
+  ]],
+];
+
+// 사진 출처 (Wikimedia Commons, 라이선스 표기). images 폴더의 사진 중 확인을 마친 것만 사용한다.
+const PHOTOS = {"horse":{"title":"Jeju horse.jpg","author":"제주마육성팀","license":"CC BY-SA 4.0","url":"https://commons.wikimedia.org/wiki/File:Jeju_horse.jpg"},"tangerine":{"title":"Jejuolle-route-07(4).jpg","author":"Jeju Olle Foundation","license":"CC BY-SA 4.0","url":"https://commons.wikimedia.org/wiki/File:Jejuolle-route-07(4).jpg"},"hallasan":{"title":"Wooden staircase steps in the forest of Hallasan Park Eorimok Trail at dusk on Jeju Island in South Korea.jpg","author":"Basile Morin","license":"CC BY-SA 4.0","url":"https://commons.wikimedia.org/wiki/File:Wooden_staircase_steps_in_the_forest_of_Hallasan_Park_Eorimok_Trail_at_dusk_on_Jeju_Island_in_South_Korea.jpg"},"seongsan":{"title":"Hydrangea macrophylla in front of Seongsan Ilchulbong volcano at blue hour in Jeju Island South Korea.jpg","author":"Basile Morin","license":"CC BY-SA 4.0","url":"https://commons.wikimedia.org/wiki/File:Hydrangea_macrophylla_in_front_of_Seongsan_Ilchulbong_volcano_at_blue_hour_in_Jeju_Island_South_Korea.jpg"},"dolhareubang":{"title":"Dol Hareubang in Spirited Garden 01.jpg","author":"Bernard Gagnon","license":"CC0","url":"https://commons.wikimedia.org/wiki/File:Dol_Hareubang_in_Spirited_Garden_01.jpg"},"haenyeo":{"title":"Korea-Jeju-Haenyeo-02.jpg","author":"by karendotcom127","license":"CC BY 2.0","url":"https://commons.wikimedia.org/wiki/File:Korea-Jeju-Haenyeo-02.jpg"},"hyeopjae":{"title":"Hyeopjae Beach Scenery.jpg","author":"Lcarrion88","license":"CC BY-SA 4.0","url":"https://commons.wikimedia.org/wiki/File:Hyeopjae_Beach_Scenery.jpg"},"cheonjiyeon":{"title":"Cheonjiyeon Waterfall 20160616 092608.jpg","author":"Yhnn0065 This photo was taken with Sony ILCE-6000","license":"CC BY-SA 3.0","url":"https://commons.wikimedia.org/wiki/File:Cheonjiyeon_Waterfall_20160616_092608.jpg"},"hallabong":{"title":"Jeju hallabong.jpg","author":"Matt Kieffer","license":"CC BY-SA 2.0","url":"https://commons.wikimedia.org/wiki/File:Jeju_hallabong.jpg"},"jusang":{"title":"Daepo Jusangjeolli Cliff 02.jpg","author":"Bernard Gagnon","license":"CC0","url":"https://commons.wikimedia.org/wiki/File:Daepo_Jusangjeolli_Cliff_02.jpg"},"olle":{"title":"Jeju Olle trail markers.jpg","author":"Sgroey","license":"CC BY-SA 4.0","url":"https://commons.wikimedia.org/wiki/File:Jeju_Olle_trail_markers.jpg"}};
+
+(function buildExplore() {
+  $('explore').innerHTML = EXPLORE.map(([title, sub, items]) => '<div class="sec"><h2>' + title + '</h2><p>' + sub + '</p><div class="cards">' +
+    items.map(([key, name, desc, color, emoji]) =>
+      '<article class="ex"><div class="photo" style="background:' + color + '">' +
+      (ART[key] || emoji || '📍') +
+      (PHOTOS[key] ? '<img src="images/' + key + '.jpg" alt="' + name + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+      '<div class="t"><h3>' + name + '</h3><p>' + desc + '</p></div></article>').join('') +
+    '</div></div>').join('') +
+    '<details class="note"><summary>📷 사진 출처 (Wikimedia Commons)</summary><ul>' +
+    Object.entries(PHOTOS).map(([k, c]) => '<li>' + esc(k) + ': ' + esc(c.title) + ' — ' + esc((c.author || '').slice(0, 60)) + ', ' + esc(c.license) +
+      ' (<a href="' + esc(c.url) + '" target="_blank" rel="noopener">원본</a>)</li>').join('') + '</ul></details>';
+})();
+
+buildChips();
+refresh(false, true);
+})();
+</script>
+</body>
+</html>
